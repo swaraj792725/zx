@@ -38,10 +38,7 @@ describe('error', () => {
   })
 
   test('getCallerLocation()', () => {
-    assert.match(
-      getCallerLocation(new Error('Foo')),
-      /TestContext\.<anonymous>/
-    )
+    assert.match(getCallerLocation(new Error('Foo')), /error\.test\.ts:\d+:\d+/)
   })
 
   describe('getCallerLocationFromString()', () => {
@@ -54,6 +51,16 @@ describe('error', () => {
         getCallerLocationFromString('stack\nstring'),
         'stack\nstring'
       )
+    })
+
+    test('no Proxy.set falls back to first frame', () => {
+      const stack = `
+    Error
+      at foo (/Users/user/test.js:5:10)
+      at bar (/Users/user/test.js:10:3)
+      at Object.<anonymous> (/Users/user/test.js:15:1)
+    `
+      assert.match(getCallerLocationFromString(stack), /^.*:5:10.*$/)
     })
 
     test(`getCallerLocationFromString-v8`, () => {

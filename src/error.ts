@@ -223,7 +223,9 @@ export class Fail extends Error {
       .split(/^\s*(at\s)?/m)
       .filter((s) => s?.includes(':'))
     const i = lines.findIndex((l) => l.includes('Proxy.set'))
-    const offset = i < 0 ? i : i + 2
+    // When Proxy.set is not found, skip the error header (e.g. "Error: msg")
+    // and use the first actual frame line instead.
+    const offset = i < 0 ? lines.findIndex((l) => /:\d+/.test(l)) : i + 2
 
     return (
       lines.find((l) => l.includes('file://')) ||
