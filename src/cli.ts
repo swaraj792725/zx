@@ -169,6 +169,7 @@ async function runScript(
     // TODO: fix unanalyzable-dynamic-import to work correctly with jsr.io
     await import(url.pathToFileURL(scriptPath).toString())
   } finally {
+    process.off('exit', rmTemp)
     rmTemp()
   }
 }

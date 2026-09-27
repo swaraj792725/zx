@@ -250,6 +250,7 @@ function runScript(script, scriptPath, tempPath) {
       import_node_process2.default.once("exit", rmTemp);
       yield import(import_node_url.default.pathToFileURL(scriptPath).toString());
     } finally {
+      import_node_process2.default.off("exit", rmTemp);
       rmTemp();
     }
   });
