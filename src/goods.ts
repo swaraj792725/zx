@@ -332,7 +332,11 @@ export async function spinner<T>(
       return await callback!()
     } finally {
       clearInterval(id as ReturnType<typeof setTimeout>)
-      stream.write(' '.repeat((process.stdout.columns || 1) - 1) + '\r')
+      const cleanLen = Math.max(
+        process.stdout.columns || 80,
+        (title ? String(title).length : 0) + 10
+      )
+      stream.write(' '.repeat(cleanLen) + '\r')
     }
   })
 }
