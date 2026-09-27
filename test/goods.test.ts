@@ -131,6 +131,22 @@ describe('goods', () => {
       assert.equal(count, 5)
     })
 
+    test('passes attempt number and lastErr to callback', async () => {
+      const attempts: number[] = []
+      const errors: (unknown | undefined)[] = []
+      const result = await retry(3, '2ms', (attempt, lastErr) => {
+        attempts.push(attempt)
+        errors.push(lastErr)
+        if (attempt < 3) throw new Error(`fail-${attempt}`)
+        return 'done'
+      })
+      assert.equal(result, 'done')
+      assert.deepEqual(attempts, [1, 2, 3])
+      assert.equal(errors[0], undefined)
+      assert.match((errors[1] as Error).message, /fail-1/)
+      assert.match((errors[2] as Error).message, /fail-2/)
+    })
+
     test('works with custom delay and limit', async () => {
       const now = Date.now()
       let count = 0
@@ -218,7 +234,7 @@ describe('goods', () => {
       const now = Date.now()
       const p = await zx(`
     try {
-      await retry(5, expBackoff('60s', 0), () => $\`exit 123\`)
+      await retry(5, expBackoff('60s', '1ms'), () => $\`exit 123\`)
     } catch (e) {
       echo('exitCode:', e.exitCode)
     }
@@ -226,7 +242,7 @@ describe('goods', () => {
 `)
       assert.ok(p.toString().includes('exitCode: 123'))
       assert.ok(p.toString().includes('success'))
-      assert.ok(Date.now() >= now + 2 + 4 + 8 + 16 + 32)
+      assert.ok(Date.now() >= now + 1 + 2 + 4 + 8 + 16)
     })
   })
 

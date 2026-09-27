@@ -221,16 +221,23 @@ export interface RetryOptions {
   shouldRetry?: (err: unknown, attempt: number) => boolean
 }
 
-export async function retry<T>(count: number, callback: () => T): Promise<T>
 export async function retry<T>(
   count: number,
-  durationOrOptions: Duration | Generator<number> | RetryOptions,
-  callback: () => T
+  callback: (attempt: number, lastErr?: unknown) => T
 ): Promise<T>
 export async function retry<T>(
   count: number,
-  d: Duration | Generator<number> | RetryOptions | (() => T),
-  cb?: () => T
+  durationOrOptions: Duration | Generator<number> | RetryOptions,
+  callback: (attempt: number, lastErr?: unknown) => T
+): Promise<T>
+export async function retry<T>(
+  count: number,
+  d:
+    | Duration
+    | Generator<number>
+    | RetryOptions
+    | ((attempt: number, lastErr?: unknown) => T),
+  cb?: (attempt: number, lastErr?: unknown) => T
 ): Promise<T> {
   if (typeof d === 'function') return retry(count, 0, d)
   if (!cb) throw new Fail('Callback is required for retry')
@@ -264,7 +271,7 @@ export async function retry<T>(
   while (count-- > 0) {
     attempt++
     try {
-      return await cb()
+      return await cb(attempt, lastErr)
     } catch (err) {
       lastErr = err
       if (shouldRetry && !shouldRetry(err, attempt)) {
