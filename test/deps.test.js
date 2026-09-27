@@ -14,10 +14,11 @@
 
 import assert from 'node:assert'
 import { test, describe } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { $, tmpfile, tmpdir, fs, path } from '../build/index.js'
 import { installDeps, parseDeps } from '../build/deps.cjs'
 
-const __dirname = new URL('.', import.meta.url).pathname
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const root = path.resolve(__dirname, '..')
 const cli = path.resolve(root, 'build/cli.js')
 

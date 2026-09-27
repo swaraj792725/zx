@@ -104,15 +104,19 @@ export function sleep(duration: Duration): Promise<void> {
   })
 }
 
-const responseToReadable = (response: Response, rs: Readable) => {
+export const responseToReadable = (response: Response, rs: Readable) => {
   const reader = response.body?.getReader()
   if (!reader) {
     rs.push(null)
     return rs
   }
   rs._read = async () => {
-    const result = await reader.read()
-    rs.push(result.done ? null : Buffer.from(result.value))
+    try {
+      const result = await reader.read()
+      rs.push(result.done ? null : Buffer.from(result.value))
+    } catch (err) {
+      rs.destroy(err as Error)
+    }
   }
   return rs
 }

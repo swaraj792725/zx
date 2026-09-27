@@ -20,13 +20,15 @@ import * as core from '../build/core.js'
 import * as cli from '../build/cli.js'
 import * as index from '../build/index.js'
 
+import { fileURLToPath } from 'node:url'
+
 // prettier-ignore
 const modules = [
   ['core', core],
   ['cli', cli],
   ['index', index],
 ]
-const root = path.resolve(new URL(import.meta.url).pathname, '../..')
+const root = path.resolve(fileURLToPath(import.meta.url), '../..')
 const filePath = path.resolve(root, `test/export.test.js`)
 
 const copyright = fs.readFileSync(

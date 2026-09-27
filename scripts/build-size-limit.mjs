@@ -16,9 +16,10 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
-const root = path.resolve(new URL(import.meta.url).pathname, '../..')
+const root = path.resolve(fileURLToPath(import.meta.url), '../..')
 const configPath = path.join(root, '.size-limit.json')
 const original = fs.readFileSync(configPath, 'utf8')
 const config = JSON.parse(original)

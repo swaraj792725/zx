@@ -33,11 +33,13 @@ import {
   tmpdir,
   tmpfile,
   versions,
+  responseToReadable,
 } from '../src/goods.ts'
-import { Writable } from 'node:stream'
+import { Writable, Readable } from 'node:stream'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
-const __dirname = new URL('.', import.meta.url).pathname
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const root = path.resolve(__dirname, '..')
 
 describe('goods', () => {
@@ -363,6 +365,29 @@ describe('goods', () => {
     assert(p1.includes('GitHub'))
     assert(p2.includes('GitHub'))
     assert(p3.includes('GitHub'))
+  })
+
+  test('responseToReadable handles stream error gracefully', async () => {
+    const mockResponse = {
+      body: {
+        getReader() {
+          return {
+            async read() {
+              throw new Error('Stream error')
+            },
+          }
+        },
+      },
+    } as unknown as Response
+
+    const rs = responseToReadable(mockResponse, new Readable())
+    await assert.rejects(
+      new Promise((_, reject) => {
+        rs.on('error', reject)
+        rs._read()
+      }),
+      /Stream error/
+    )
   })
 
   describe('dotenv', () => {

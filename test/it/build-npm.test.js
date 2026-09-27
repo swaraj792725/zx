@@ -14,6 +14,7 @@
 
 import assert from 'node:assert'
 import { describe, test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import {
   $,
   within,
@@ -24,7 +25,7 @@ import {
   version,
 } from '../../build/index.js'
 
-const __dirname = new URL('.', import.meta.url).pathname
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const root = path.resolve(__dirname, '../..')
 const sync = async (from, to, entries) => {
   for (const entry of entries)
