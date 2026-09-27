@@ -393,6 +393,21 @@ describe('goods', () => {
     assert(p3.includes('GitHub'))
   })
 
+  test('fetch().pipe to Writable stream', async () => {
+    let data = ''
+    const dest = new Writable({
+      write(chunk, _enc, cb) {
+        data += chunk.toString()
+        cb()
+      },
+    })
+    const req = fetch('https://github.com/')
+    req.pipe(dest)
+    await req
+    await new Promise((resolve) => dest.on('finish', resolve))
+    assert(data.length > 0)
+  })
+
   test('responseToReadable handles stream error gracefully', async () => {
     const mockResponse = {
       body: {

@@ -130,12 +130,15 @@ function fetch(url, init) {
       })(dest, ...args) : dest;
       p.then(
         (r) => {
-          var _a;
-          return responseToReadable(r, rs).pipe((_a = _dest.run) == null ? void 0 : _a.call(_dest));
+          const destStream = typeof (_dest == null ? void 0 : _dest.run) === "function" ? _dest.run() : _dest;
+          return responseToReadable(r, rs).pipe(destStream);
         },
         (err) => {
-          var _a;
-          return (_a = _dest.abort) == null ? void 0 : _a.call(_dest, err);
+          if (typeof (_dest == null ? void 0 : _dest.abort) === "function") {
+            _dest.abort(err);
+          } else if (typeof (_dest == null ? void 0 : _dest.destroy) === "function") {
+            _dest.destroy(err);
+          }
         }
       );
       return _dest;

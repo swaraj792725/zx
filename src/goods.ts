@@ -143,8 +143,18 @@ export function fetch(
           })(dest as TemplateStringsArray, ...args)
         : dest
       p.then(
-        (r) => responseToReadable(r, rs).pipe(_dest.run?.()),
-        (err) => _dest.abort?.(err)
+        (r) => {
+          const destStream =
+            typeof _dest?.run === 'function' ? _dest.run() : _dest
+          return responseToReadable(r, rs).pipe(destStream)
+        },
+        (err) => {
+          if (typeof _dest?.abort === 'function') {
+            _dest.abort(err)
+          } else if (typeof _dest?.destroy === 'function') {
+            _dest.destroy(err)
+          }
+        }
       )
       return _dest
     },
