@@ -172,6 +172,32 @@ describe('goods', () => {
       assert.equal(result, 'success')
     })
 
+    test('supports expBackoff with jitter', () => {
+      const gen = expBackoff('100ms', '10ms', true)
+      const val1 = gen.next().value as number
+      assert.ok(val1 >= 0 && val1 <= 20)
+    })
+
+    test('supports RetryOptions with shouldRetry predicate', async () => {
+      let attempts = 0
+      try {
+        await retry(
+          5,
+          {
+            delay: '2ms',
+            shouldRetry: (err: any) => err.message !== 'fatal',
+          },
+          () => {
+            attempts++
+            throw new Error('fatal')
+          }
+        )
+      } catch (err: any) {
+        assert.equal(err.message, 'fatal')
+        assert.equal(attempts, 1)
+      }
+    })
+
     test('integration', async () => {
       const now = Date.now()
       const p = await zx(`

@@ -136,6 +136,9 @@ export declare class ProcessPromise extends Promise<ProcessOutput> {
     get [Symbol.toStringTag](): string;
     [Symbol.toPrimitive](): string;
     json<T = any>(): Promise<T>;
+    tryJson<T = any>(): Promise<T | undefined>;
+    jsonl<T = any>(): Promise<T[]>;
+    tryJsonl<T = any>(): Promise<(T | undefined)[]>;
     text(encoding?: Encoding): Promise<string>;
     lines(delimiter?: Options['delimiter']): Promise<string[]>;
     buffer(): Promise<Buffer>;
@@ -189,6 +192,9 @@ export declare class ProcessOutput extends Error {
     get [Symbol.toStringTag](): string;
     get ok(): boolean;
     json<T = any>(): T;
+    tryJson<T = any>(): T | undefined;
+    jsonl<T = any>(): T[];
+    tryJsonl<T = any>(): (T | undefined)[];
     buffer(): Buffer;
     blob(type?: string): Blob;
     text(encoding?: Encoding): string;

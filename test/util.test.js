@@ -70,7 +70,9 @@ describe('util', () => {
   test('quote()', () => {
     assert.ok(quote('string') === 'string')
     assert.ok(quote('') === `$''`)
-    assert.ok(quote(`'\f\n\r\t\v\0`) === `$'\\'\\f\\n\\r\\t\\v\\0'`)
+    assert.ok(
+      quote(`'\f\n\r\t\v\0\x07\x08\x1b`) === `$'\\'\\f\\n\\r\\t\\v\\0\\a\\b\\e'`
+    )
 
     const allowed =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_/.-+@:=,%'
@@ -92,8 +94,12 @@ describe('util', () => {
     assert.equal(parseDuration(1000), 1000)
     assert.equal(parseDuration('100'), 100)
     assert.equal(parseDuration('2s'), 2000)
+    assert.equal(parseDuration('1.5s'), 1500)
+    assert.equal(parseDuration('0.5s'), 500)
     assert.equal(parseDuration('500ms'), 500)
     assert.equal(parseDuration('2m'), 120000)
+    assert.equal(parseDuration('1h'), 3600000)
+    assert.equal(parseDuration('1d'), 86400000)
     assert.throws(() => parseDuration('f2ms'))
     assert.throws(() => parseDuration('2mss'))
     assert.throws(() => parseDuration(NaN))

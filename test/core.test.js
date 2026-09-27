@@ -253,14 +253,14 @@ describe('core', () => {
     test('$ thrown as error', async () => {
       let err
       try {
-        await $`wtf`
+        await $`non_existent_cmd_zx`
       } catch (p) {
         err = p
       }
       assert.ok(err.exitCode > 0)
       assert.match(err.toString(), /command not found/)
       assert.match(err.valueOf(), /command not found/)
-      assert.match(err.stderr, /wtf: command not found/)
+      assert.match(err.stderr, /non_existent_cmd_zx: command not found/)
       assert.match(err[inspect.custom](), /Command not found/)
     })
 
@@ -1413,6 +1413,31 @@ describe('core', () => {
 
     test('json()', async () => {
       assert.deepEqual(await $`echo '{"key":"value"}'`.json(), { key: 'value' })
+      const err = await $`echo 'not json'`.nothrow()
+      assert.throws(
+        () => err.json(),
+        /Failed to parse command output as JSON: not json/
+      )
+    })
+
+    test('tryJson()', async () => {
+      assert.deepEqual(await $`echo '{"key":"value"}'`.tryJson(), {
+        key: 'value',
+      })
+      const err = await $`echo 'not json'`.nothrow()
+      assert.equal(err.tryJson(), undefined)
+    })
+
+    test('jsonl()', async () => {
+      const res = await $`echo '{"a":1}\n{"b":2}'`.jsonl()
+      assert.deepEqual(res, [{ a: 1 }, { b: 2 }])
+      const err = await $`echo '{"a":1}\ninvalid'`.nothrow()
+      assert.throws(() => err.jsonl(), /Failed to parse JSONL line 2: invalid/)
+    })
+
+    test('tryJsonl()', async () => {
+      const res = await $`echo '{"a":1}\ninvalid\n{"b":2}'`.tryJsonl()
+      assert.deepEqual(res, [{ a: 1 }, undefined, { b: 2 }])
     })
 
     test('text()', async () => {

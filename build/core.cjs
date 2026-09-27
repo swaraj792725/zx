@@ -753,6 +753,15 @@ var _ProcessPromise = class _ProcessPromise extends Promise {
   json() {
     return this.then((o) => o.json());
   }
+  tryJson() {
+    return this.then((o) => o.tryJson());
+  }
+  jsonl() {
+    return this.then((o) => o.jsonl());
+  }
+  tryJsonl() {
+    return this.then((o) => o.tryJsonl());
+  }
   text(encoding) {
     return this.then((o) => o.text(encoding));
   }
@@ -1029,7 +1038,43 @@ var _ProcessOutput = class _ProcessOutput extends Error {
     return !this._dto.error && this.exitCode === 0;
   }
   json() {
-    return JSON.parse(this.stdall);
+    try {
+      return JSON.parse(this.stdall);
+    } catch (e) {
+      const preview = this.stdall.length > 200 ? this.stdall.slice(0, 200) + "..." : this.stdall;
+      const formatted = preview.replace(/\n/g, "\u21B5");
+      throw new SyntaxError(
+        `Failed to parse command output as JSON: ${formatted}`
+      );
+    }
+  }
+  tryJson() {
+    try {
+      return JSON.parse(this.stdall);
+    } catch (e) {
+      return void 0;
+    }
+  }
+  jsonl() {
+    return this.lines().filter((line) => line.trim().length > 0).map((line, idx) => {
+      try {
+        return JSON.parse(line);
+      } catch (e) {
+        const preview = line.length > 100 ? line.slice(0, 100) + "..." : line;
+        throw new SyntaxError(
+          `Failed to parse JSONL line ${idx + 1}: ${preview}`
+        );
+      }
+    });
+  }
+  tryJsonl() {
+    return this.lines().filter((line) => line.trim().length > 0).map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch (e) {
+        return void 0;
+      }
+    });
   }
   buffer() {
     return import_node_buffer.Buffer.from(this.stdall);

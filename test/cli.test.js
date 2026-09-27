@@ -356,7 +356,8 @@ console.log(a);
   })
 
   test('exceptions are caught', async () => {
-    const out1 = await $`node build/cli.js <<<${'await $`wtf`'}`.nothrow()
+    const out1 =
+      await $`node build/cli.js <<<${'await $`non_existent_cmd_zx`'}`.nothrow()
     const out2 = await $`node build/cli.js <<<'throw 42'`.nothrow()
     assert.match(out1.stderr, /Error:/)
     assert.match(out2.stderr, /42/)
@@ -378,21 +379,27 @@ console.log(a);
     const toPOSIXPath = (_path) => _path.split(path.sep).join(path.posix.sep)
 
     const zxPath = path.resolve('./build/cli.js')
-    const zxLocation = isWindows ? toPOSIXPath(zxPath) : zxPath
-    const scriptCode = `#!/usr/bin/env ${zxLocation}\nconsole.log('The script from path runs.')`
     const scriptName = 'script-from-path'
-    const scriptFile = tmpfile(scriptName, scriptCode, 0o744)
+    const scriptFile = tmpfile(scriptName, '', 0o744)
     const scriptDir = path.dirname(scriptFile)
+    const zxWrapper = path.join(scriptDir, isWindows ? 'zx.cmd' : 'zx')
+    const zxWrapperCode = isWindows
+      ? `@node "${zxPath}" %*`
+      : `#!/bin/sh\nexec node "${zxPath}" "$@"`
+    await fs.writeFile(zxWrapper, zxWrapperCode, { mode: 0o755 })
+
+    const scriptCode = `#!/usr/bin/env zx\nconsole.log('The script from path runs.')`
+    await fs.writeFile(scriptFile, scriptCode, { mode: 0o744 })
 
     const envPathSeparator = isWindows ? ';' : ':'
     process.env.PATH += envPathSeparator + scriptDir
 
     try {
-      await $`chmod +x ${zxLocation}`
       await $`${scriptName}`
     } finally {
       process.env.PATH = oldPath
       await fs.rm(scriptFile)
+      await fs.rm(zxWrapper)
     }
   })
 

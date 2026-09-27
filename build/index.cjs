@@ -29,6 +29,7 @@ __export(index_exports, {
   parseArgv: () => parseArgv,
   question: () => question,
   quiet: () => quiet,
+  responseToReadable: () => responseToReadable,
   retry: () => retry,
   sleep: () => sleep,
   spinner: () => spinner,
@@ -108,8 +109,12 @@ var responseToReadable = (response, rs) => {
     return rs;
   }
   rs._read = () => __async(null, null, function* () {
-    const result = yield reader.read();
-    rs.push(result.done ? null : import_node_buffer.Buffer.from(result.value));
+    try {
+      const result = yield reader.read();
+      rs.push(result.done ? null : import_node_buffer.Buffer.from(result.value));
+    } catch (err) {
+      rs.destroy(err);
+    }
   });
   return rs;
 };
@@ -191,12 +196,22 @@ function stdin() {
 }
 function retry(count, d, cb) {
   return __async(this, null, function* () {
+    var _a, _b;
     if (typeof d === "function") return retry(count, 0, d);
     if (!cb) throw new import_core.Fail("Callback is required for retry");
+    let duration = 0;
+    let shouldRetry;
+    if (typeof d === "object" && d !== null && !("next" in d) && !Array.isArray(d)) {
+      const opts = d;
+      duration = (_a = opts.delay) != null ? _a : 0;
+      shouldRetry = opts.shouldRetry;
+    } else {
+      duration = d;
+    }
     const total = count;
-    const gen = typeof d === "object" ? d : (function* (d2) {
-      while (true) yield d2;
-    })((0, import_util.parseDuration)(d));
+    const gen = typeof duration === "object" && "next" in duration ? duration : (function* (dur) {
+      while (true) yield dur;
+    })((0, import_util.parseDuration)(duration));
     let attempt = 0;
     let lastErr;
     while (count-- > 0) {
@@ -205,7 +220,10 @@ function retry(count, d, cb) {
         return yield cb();
       } catch (err) {
         lastErr = err;
-        const delay = gen.next().value;
+        if (shouldRetry && !shouldRetry(err, attempt)) {
+          throw err;
+        }
+        const delay = (_b = gen.next().value) != null ? _b : 0;
         import_core.$.log({
           kind: "retry",
           total,
@@ -222,12 +240,19 @@ function retry(count, d, cb) {
     throw lastErr;
   });
 }
-function* expBackoff(max = "60s", delay = "100ms") {
+function* expBackoff(max = "60s", delay = "100ms", jitter = false) {
   const maxMs = (0, import_util.parseDuration)(max);
   const randMs = (0, import_util.parseDuration)(delay);
+  const jitterFactor = typeof jitter === "number" ? Math.min(Math.max(jitter, 0), 1) : jitter ? 0.2 : 0;
   let n = 0;
   while (true) {
-    yield Math.min(randMs * __pow(2, n++), maxMs);
+    const base = Math.min(randMs * __pow(2, n++), maxMs);
+    if (jitterFactor > 0) {
+      const delta = base * jitterFactor * (Math.random() * 2 - 1);
+      yield Math.max(0, Math.min(Math.round(base + delta), maxMs));
+    } else {
+      yield base;
+    }
   }
 }
 function spinner(title, callback) {
@@ -281,6 +306,7 @@ function quiet(promise) {
   parseArgv,
   question,
   quiet,
+  responseToReadable,
   retry,
   sleep,
   spinner,

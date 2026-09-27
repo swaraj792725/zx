@@ -86,7 +86,10 @@ export function quote(arg: string): string {
       .replace(/\r/g, '\\r')
       .replace(/\t/g, '\\t')
       .replace(/\v/g, '\\v')
-      .replace(/\0/g, '\\0') +
+      .replace(/\0/g, '\\0')
+      .replace(/\x07/g, '\\a')
+      .replace(/\x08/g, '\\b')
+      .replace(/\x1b/g, '\\e') +
     `'`
   )
 }
@@ -99,17 +102,34 @@ export function quotePowerShell(arg: string): string {
 }
 
 export type Duration =
-  number | `${number}` | `${number}m` | `${number}s` | `${number}ms`
+  | number
+  | `${number}`
+  | `${number}d`
+  | `${number}h`
+  | `${number}m`
+  | `${number}s`
+  | `${number}ms`
 
-export function parseDuration(d: Duration) {
+export function parseDuration(d: Duration): number {
   if (typeof d === 'number') {
     if (isNaN(d) || d < 0) throw new Error(`Invalid duration: "${d}".`)
     return d
   }
-  const [m, v, u] = d.match(/^(\d+)(m?s?)$/) || []
-  if (!m) throw new Error(`Unknown duration: "${d}".`)
+  const match = String(d).match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)?$/)
+  if (!match) throw new Error(`Unknown duration: "${d}".`)
 
-  return +v * ({ s: 1000, ms: 1, m: 60_000 }[u] || 1)
+  const val = parseFloat(match[1])
+  const unit = match[2] || 'ms'
+
+  const multipliers: Record<string, number> = {
+    ms: 1,
+    s: 1000,
+    m: 60_000,
+    h: 3_600_000,
+    d: 86_400_000,
+  }
+
+  return val * (multipliers[unit] ?? 1)
 }
 
 export const once = <T extends (...args: any[]) => any>(fn: T) => {

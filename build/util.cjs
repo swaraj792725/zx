@@ -64,7 +64,7 @@ function preferLocalBin(env, ...dirs) {
 function quote(arg) {
   if (arg === "") return `$''`;
   if (/^[\w/.\-+@:=,%]+$/.test(arg)) return arg;
-  return `$'` + arg.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\f/g, "\\f").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t").replace(/\v/g, "\\v").replace(/\0/g, "\\0") + `'`;
+  return `$'` + arg.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\f/g, "\\f").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t").replace(/\v/g, "\\v").replace(/\0/g, "\\0").replace(/\x07/g, "\\a").replace(/\x08/g, "\\b").replace(/\x1b/g, "\\e") + `'`;
 }
 function quotePowerShell(arg) {
   if (arg === "") return `''`;
@@ -72,13 +72,23 @@ function quotePowerShell(arg) {
   return `'` + arg.replace(/'/g, "''") + `'`;
 }
 function parseDuration(d) {
+  var _a;
   if (typeof d === "number") {
     if (isNaN(d) || d < 0) throw new Error(`Invalid duration: "${d}".`);
     return d;
   }
-  const [m, v, u] = d.match(/^(\d+)(m?s?)$/) || [];
-  if (!m) throw new Error(`Unknown duration: "${d}".`);
-  return +v * ({ s: 1e3, ms: 1, m: 6e4 }[u] || 1);
+  const match = String(d).match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)?$/);
+  if (!match) throw new Error(`Unknown duration: "${d}".`);
+  const val = parseFloat(match[1]);
+  const unit = match[2] || "ms";
+  const multipliers = {
+    ms: 1,
+    s: 1e3,
+    m: 6e4,
+    h: 36e5,
+    d: 864e5
+  };
+  return val * ((_a = multipliers[unit]) != null ? _a : 1);
 }
 var once = (fn) => {
   let called = false;

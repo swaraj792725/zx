@@ -16,6 +16,7 @@ export declare const parseArgv: (args?: string[], opts?: ArgvOpts, defs?: Record
 export declare function updateArgv(args?: string[], opts?: ArgvOpts): void;
 export declare const argv: minimist.ParsedArgs;
 export declare function sleep(duration: Duration): Promise<void>;
+export declare const responseToReadable: (response: Response, rs: Readable) => Readable;
 export declare function fetch(url: RequestInfo, init?: RequestInit): Promise<Response> & {
     pipe: {
         (dest: TemplateStringsArray, ...args: any[]): ProcessPromise;
@@ -29,8 +30,12 @@ export declare function question(query?: string, { choices, input, output, }?: {
     output?: NodeJS.WriteStream;
 }): Promise<string>;
 export declare function stdin(stream?: Readable): Promise<string>;
+export interface RetryOptions {
+    delay?: Duration | Generator<number>;
+    shouldRetry?: (err: unknown, attempt: number) => boolean;
+}
 export declare function retry<T>(count: number, callback: () => T): Promise<T>;
-export declare function retry<T>(count: number, duration: Duration | Generator<number>, callback: () => T): Promise<T>;
-export declare function expBackoff(max?: Duration, delay?: Duration): Generator<number, void, unknown>;
+export declare function retry<T>(count: number, durationOrOptions: Duration | Generator<number> | RetryOptions, callback: () => T): Promise<T>;
+export declare function expBackoff(max?: Duration, delay?: Duration, jitter?: boolean | number): Generator<number, void, unknown>;
 export declare function spinner<T>(callback: () => T): Promise<T>;
 export declare function spinner<T>(title: string, callback: () => T): Promise<T>;

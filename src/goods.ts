@@ -206,27 +206,48 @@ export async function stdin(stream: Readable = process.stdin): Promise<string> {
   return buf
 }
 
+export interface RetryOptions {
+  delay?: Duration | Generator<number>
+  shouldRetry?: (err: unknown, attempt: number) => boolean
+}
+
 export async function retry<T>(count: number, callback: () => T): Promise<T>
 export async function retry<T>(
   count: number,
-  duration: Duration | Generator<number>,
+  durationOrOptions: Duration | Generator<number> | RetryOptions,
   callback: () => T
 ): Promise<T>
 export async function retry<T>(
   count: number,
-  d: Duration | Generator<number> | (() => T),
+  d: Duration | Generator<number> | RetryOptions | (() => T),
   cb?: () => T
 ): Promise<T> {
   if (typeof d === 'function') return retry(count, 0, d)
   if (!cb) throw new Fail('Callback is required for retry')
 
+  let duration: Duration | Generator<number> = 0
+  let shouldRetry: ((err: unknown, attempt: number) => boolean) | undefined
+
+  if (
+    typeof d === 'object' &&
+    d !== null &&
+    !('next' in d) &&
+    !Array.isArray(d)
+  ) {
+    const opts = d as RetryOptions
+    duration = opts.delay ?? 0
+    shouldRetry = opts.shouldRetry
+  } else {
+    duration = d as Duration | Generator<number>
+  }
+
   const total = count
   const gen =
-    typeof d === 'object'
-      ? d
-      : (function* (d) {
-          while (true) yield d
-        })(parseDuration(d))
+    typeof duration === 'object' && 'next' in duration
+      ? duration
+      : (function* (dur) {
+          while (true) yield dur
+        })(parseDuration(duration as Duration))
 
   let attempt = 0
   let lastErr: unknown
@@ -236,7 +257,10 @@ export async function retry<T>(
       return await cb()
     } catch (err) {
       lastErr = err
-      const delay = gen.next().value
+      if (shouldRetry && !shouldRetry(err, attempt)) {
+        throw err
+      }
+      const delay = gen.next().value ?? 0
 
       $.log({
         kind: 'retry',
@@ -255,13 +279,26 @@ export async function retry<T>(
 
 export function* expBackoff(
   max: Duration = '60s',
-  delay: Duration = '100ms'
+  delay: Duration = '100ms',
+  jitter: boolean | number = false
 ): Generator<number, void, unknown> {
   const maxMs = parseDuration(max)
   const randMs = parseDuration(delay)
+  const jitterFactor =
+    typeof jitter === 'number'
+      ? Math.min(Math.max(jitter, 0), 1)
+      : jitter
+        ? 0.2
+        : 0
   let n = 0
   while (true) {
-    yield Math.min(randMs * 2 ** n++, maxMs)
+    const base = Math.min(randMs * 2 ** n++, maxMs)
+    if (jitterFactor > 0) {
+      const delta = base * jitterFactor * (Math.random() * 2 - 1)
+      yield Math.max(0, Math.min(Math.round(base + delta), maxMs))
+    } else {
+      yield base
+    }
   }
 }
 

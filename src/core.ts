@@ -578,6 +578,18 @@ export class ProcessPromise extends Promise<ProcessOutput> {
     return this.then((o) => o.json<T>())
   }
 
+  tryJson<T = any>(): Promise<T | undefined> {
+    return this.then((o) => o.tryJson<T>())
+  }
+
+  jsonl<T = any>(): Promise<T[]> {
+    return this.then((o) => o.jsonl<T>())
+  }
+
+  tryJsonl<T = any>(): Promise<(T | undefined)[]> {
+    return this.then((o) => o.tryJsonl<T>())
+  }
+
   text(encoding?: Encoding): Promise<string> {
     return this.then((o) => o.text(encoding))
   }
@@ -934,7 +946,53 @@ export class ProcessOutput extends Error {
   }
 
   json<T = any>(): T {
-    return JSON.parse(this.stdall)
+    try {
+      return JSON.parse(this.stdall)
+    } catch {
+      const preview =
+        this.stdall.length > 200
+          ? this.stdall.slice(0, 200) + '...'
+          : this.stdall
+      const formatted = preview.replace(/\n/g, '↵')
+      throw new SyntaxError(
+        `Failed to parse command output as JSON: ${formatted}`
+      )
+    }
+  }
+
+  tryJson<T = any>(): T | undefined {
+    try {
+      return JSON.parse(this.stdall)
+    } catch {
+      return undefined
+    }
+  }
+
+  jsonl<T = any>(): T[] {
+    return this.lines()
+      .filter((line) => line.trim().length > 0)
+      .map((line, idx) => {
+        try {
+          return JSON.parse(line)
+        } catch {
+          const preview = line.length > 100 ? line.slice(0, 100) + '...' : line
+          throw new SyntaxError(
+            `Failed to parse JSONL line ${idx + 1}: ${preview}`
+          )
+        }
+      })
+  }
+
+  tryJsonl<T = any>(): (T | undefined)[] {
+    return this.lines()
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        try {
+          return JSON.parse(line)
+        } catch {
+          return undefined
+        }
+      })
   }
 
   buffer(): Buffer {
