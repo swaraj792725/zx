@@ -182,7 +182,11 @@ describe('log', () => {
         `echo '\n str\n'`,
         "$ \x1B[92mecho\x1B[39m \x1B[93m'\x1B[39m\x1B[0m\x1B[0m\n\x1B[0m> \x1B[0m\x1B[93m str\x1B[39m\x1B[0m\x1B[0m\n\x1B[0m> \x1B[0m\x1B[93m'\x1B[39m\n",
       ],
-      [`$'\\''`, "$ \x1B[93m$\x1B[39m\x1B[93m'\\'\x1B[39m\x1B[93m'\x1B[39m\n"],
+      [`$'\\''`, "$ \x1B[93m$\x1B[39m\x1B[93m'\\''\x1B[39m\n"],
+      [
+        `echo "hello \\"world\\""`,
+        '$ \x1B[92mecho\x1B[39m \x1B[93m"hello \\"world\\""\x1B[39m\n',
+      ],
       [
         'sass-compiler --style=compressed src/static/bootstrap.scss > dist/static/bootstrap-v5.3.3.min.css',
         '$ \x1B[92msass-compiler\x1B[39m --style\x1B[31m=\x1B[39mcompressed src/static/bootstrap.scss \x1B[31m>\x1B[39m\x1B[92m dist/static/bootstrap-v5.3.3.min.css\x1B[39m\n',

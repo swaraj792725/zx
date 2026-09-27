@@ -211,7 +211,9 @@ export function formatCmd(cmd: string): string {
       }
     } else {
       buf += c
-      if (c === q) {
+      const backslashes = buf.slice(0, -1).match(/\\+$/)?.[0].length || 0
+      const isEscaped = backslashes % 2 === 1
+      if (c === q && !isEscaped) {
         cap()
         q = ''
       }

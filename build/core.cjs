@@ -321,6 +321,7 @@ var RESERVED_WORDS = /* @__PURE__ */ new Set([
   "EOF"
 ]);
 function formatCmd(cmd) {
+  var _a;
   if (cmd == void 0) return import_vendor_core.chalk.grey("undefined");
   let q = "";
   let out = "$ ";
@@ -380,7 +381,9 @@ function formatCmd(cmd) {
       }
     } else {
       buf += c;
-      if (c === q) {
+      const backslashes = ((_a = buf.slice(0, -1).match(/\\+$/)) == null ? void 0 : _a[0].length) || 0;
+      const isEscaped = backslashes % 2 === 1;
+      if (c === q && !isEscaped) {
         cap();
         q = "";
       }
