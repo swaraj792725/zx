@@ -109,7 +109,22 @@ describe('log', () => {
       })
       assert.equal(
         data.join(''),
-        '\x1B[41m\x1B[37m FAIL \x1B[39m\x1B[49m Attempt: 1/3; next in 1000ms\n'
+        '\x1B[41m\x1B[37m FAIL \x1B[39m\x1B[49m Attempt: 1/3; next in 1000ms — foo\n'
+      )
+    })
+
+    test('retry with non-Error exception omits reason', () => {
+      log({
+        kind: 'retry',
+        attempt: 2,
+        total: 5,
+        delay: 0,
+        exception: 'string error',
+        verbose: true,
+      })
+      assert.equal(
+        data.join(''),
+        '\x1B[41m\x1B[37m FAIL \x1B[39m\x1B[49m Attempt: 2/5\n'
       )
     })
 

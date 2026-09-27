@@ -101,8 +101,12 @@ const formatters: LogFormatters = {
   retry(entry) {
     const attempt = `Attempt: ${entry.attempt}${entry.total == Infinity ? '' : `/${entry.total}`}`
     const delay = entry.delay > 0 ? `; next in ${entry.delay}ms` : ''
+    const reason =
+      entry.exception instanceof Error
+        ? ` — ${entry.exception.message.split('\n')[0]}`
+        : ''
 
-    return `${chalk.bgRed.white(' FAIL ')} ${attempt}${delay}\n`
+    return `${chalk.bgRed.white(' FAIL ')} ${attempt}${delay}${reason}\n`
   },
   end() {
     return ''
