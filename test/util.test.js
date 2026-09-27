@@ -129,6 +129,8 @@ describe('util', () => {
     assert.equal(toCamelCase('PREFER_LOCAL'), 'preferLocal')
     assert.equal(toCamelCase('SOME_MORE_BIG_STR'), 'someMoreBigStr')
     assert.equal(toCamelCase('kebab-input-str'), 'kebabInputStr')
+    assert.equal(toCamelCase('HTTP_PORT_8080'), 'httpPort8080')
+    assert.equal(toCamelCase('--foo-bar-123'), 'fooBar123')
   })
 
   test('parseBool()', () => {
