@@ -434,18 +434,10 @@ console.log(a);
         true
       )
 
-      try {
-        assert.equal(
-          isMain(
-            'file:///root/zx/test/cli.test.js',
-            '/root/zx/test/all.test.js'
-          ),
-          true
-        )
-        assert.throw()
-      } catch (e) {
-        assert.ok(['EACCES', 'ENOENT'].includes(e.code))
-      }
+      assert.equal(
+        isMain('file:///root/zx/test/cli.test.js', '/root/zx/test/all.test.js'),
+        false
+      )
     })
 
     test('isMain() function is running from the wrong path', () => {

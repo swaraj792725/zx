@@ -273,7 +273,11 @@ export function isMain(
   if (typeof meta === 'string') {
     if (meta.startsWith('file:')) {
       const modulePath = url.fileURLToPath(meta).replace(/\.\w+$/, '')
-      const mainPath = fs.realpathSync(scriptpath).replace(/\.\w+$/, '')
+      let mainPath = scriptpath
+      try {
+        mainPath = fs.realpathSync(scriptpath)
+      } catch {}
+      mainPath = mainPath.replace(/\.\w+$/, '')
       return mainPath === modulePath
     }
 
