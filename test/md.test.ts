@@ -22,8 +22,18 @@ describe('transformMarkdown()', () => {
       assert.equal(transformMarkdown('\n'), '// \n// ')
     })
 
-    test('preserves tab-indented blocks after a blank line (legacy behavior)', () => {
-      assert.equal(transformMarkdown('  \n    '), '  \n    ')
+    test('comments out 2-3 space indented text and list continuations', () => {
+      assert.equal(
+        transformMarkdown('\n  Two spaces text\n   Three spaces text'),
+        '// \n//   Two spaces text\n//    Three spaces text'
+      )
+    })
+
+    test('preserves 4-space and tab-indented blocks after a blank line', () => {
+      assert.equal(
+        transformMarkdown('\n    code\n\tcode'),
+        '// \n    code\n\tcode'
+      )
     })
 
     test('does not treat a mid-paragraph fence as a fenced block (legacy behavior)', () => {
