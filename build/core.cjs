@@ -238,7 +238,7 @@ ${details}`;
   static getCallerLocationFromString(stackString = "unknown") {
     const lines = stackString.split(/^\s*(at\s)?/m).filter((s) => s == null ? void 0 : s.includes(":"));
     const i = lines.findIndex((l) => l.includes("Proxy.set"));
-    const offset = i < 0 ? i : i + 2;
+    const offset = i < 0 ? lines.findIndex((l) => /:\d+/.test(l)) : i + 2;
     return (lines.find((l) => l.includes("file://")) || lines[offset] || stackString).trim();
   }
   static getCallerLocation(err = new Error("zx error")) {
@@ -282,7 +282,8 @@ var formatters = {
   retry(entry) {
     const attempt = `Attempt: ${entry.attempt}${entry.total == Infinity ? "" : `/${entry.total}`}`;
     const delay = entry.delay > 0 ? `; next in ${entry.delay}ms` : "";
-    return `${import_vendor_core.chalk.bgRed.white(" FAIL ")} ${attempt}${delay}
+    const reason = entry.exception instanceof Error ? ` \u2014 ${entry.exception.message.split("\n")[0]}` : "";
+    return `${import_vendor_core.chalk.bgRed.white(" FAIL ")} ${attempt}${delay}${reason}
 `;
   },
   end() {

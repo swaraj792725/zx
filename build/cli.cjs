@@ -63,7 +63,7 @@ var import_util = require("./util.cjs");
 function transformMarkdown(buf) {
   var _a2;
   const out = [];
-  const tabRe = /^(  +|\t)/;
+  const tabRe = /^( {4,}|\t)/;
   const fenceRe = new RegExp("^(?<indent> {0,3})(?<fence>(`{3,20}|~{3,20}))(?:(?<js>js|javascript|ts|typescript)|(?<bash>sh|shell|bash)|.*)$");
   let state = "root";
   let prevEmpty = true;
@@ -103,18 +103,18 @@ function transformMarkdown(buf) {
           state = "tab";
           continue;
         }
-        prevEmpty = line === "";
+        prevEmpty = line.trim() === "";
         out.push("// " + line);
         continue;
       }
       case "tab":
-        if (line === "") out.push("");
+        if (line.trim() === "") out.push("");
         else if (tabRe.test(line)) out.push(line);
         else {
           out.push("// " + line);
           state = "root";
         }
-        prevEmpty = line === "";
+        prevEmpty = line.trim() === "";
         break;
       case "fence":
         if (isEnd(line)) {

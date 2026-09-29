@@ -220,7 +220,7 @@ function retry(count, d, cb) {
     while (count-- > 0) {
       attempt++;
       try {
-        return yield cb();
+        return yield cb(attempt, lastErr);
       } catch (err) {
         lastErr = err;
         if (shouldRetry && !shouldRetry(err, attempt)) {
@@ -272,7 +272,10 @@ function spinner(title, callback) {
         return yield callback();
       } finally {
         clearInterval(id);
-        stream.write(" ".repeat((import_node_process.default.stdout.columns || 1) - 1) + "\r");
+        const c = stream.columns || import_node_process.default.stderr.columns || 80;
+        stream.write(
+          " ".repeat(Math.max(c, (title ? String(title).length : 0) + 10)) + "\r"
+        );
       }
     }));
   });
