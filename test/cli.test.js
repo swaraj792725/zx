@@ -438,6 +438,11 @@ console.log(a);
         isMain('file:///root/zx/test/cli.test.js', '/root/zx/test/all.test.js'),
         false
       )
+      assert.equal(isMain('jsr:@webpod/zx'), true)
+      assert.equal(isMain('npm:zx'), true)
+      assert.equal(isMain('https://deno.land/x/zx/cli.js'), true)
+      assert.equal(isMain({ main: true, url: 'file:///foo' }), true)
+      assert.equal(isMain({ main: false, url: 'file:///foo' }), false)
     })
 
     test('isMain() function is running from the wrong path', () => {

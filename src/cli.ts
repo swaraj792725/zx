@@ -270,7 +270,19 @@ export function isMain(
   meta: ImportMeta['url'] | ImportMeta = import.meta.url,
   scriptpath: string = process.argv[1]
 ): boolean {
+  if (typeof meta === 'object' && meta !== null) {
+    if ('main' in meta) return !!(meta as any).main
+    meta = (meta as any).url
+  }
+
   if (typeof meta === 'string') {
+    if (
+      meta.startsWith('jsr:') ||
+      meta.startsWith('npm:') ||
+      /^https?:/.test(meta)
+    ) {
+      return true
+    }
     if (meta.startsWith('file:')) {
       const modulePath = url.fileURLToPath(meta).replace(/\.\w+$/, '')
       let mainPath = scriptpath
@@ -284,7 +296,7 @@ export function isMain(
     return false
   }
 
-  return !!meta.main
+  return false
 }
 
 export function normalizeExt(ext?: string): string | undefined {
