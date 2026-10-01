@@ -447,6 +447,41 @@ describe('goods', () => {
     )
   })
 
+  test('fetch().pipe forwards stream errors to destination', async () => {
+    const mockResponse = {
+      body: {
+        getReader() {
+          return {
+            async read() {
+              throw new Error('Mid-stream read failure')
+            },
+          }
+        },
+      },
+    } as unknown as Response
+
+    const rs = new Readable()
+    let destroyedError: any = null
+    const dest = new Writable({
+      write(_chunk, _enc, cb) {
+        cb()
+      },
+    })
+    dest.on('error', (err) => {
+      destroyedError = err
+    })
+
+    const stream = responseToReadable(mockResponse, rs)
+    stream.on('error', (err) => {
+      if (typeof dest.destroy === 'function') dest.destroy(err)
+    })
+    stream.pipe(dest)
+    stream._read()
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    assert.match(destroyedError?.message, /Mid-stream read failure/)
+  })
+
   describe('dotenv', () => {
     test('parse()', () => {
       assert.deepEqual(dotenv.parse(''), {})

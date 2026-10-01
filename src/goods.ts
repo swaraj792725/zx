@@ -146,7 +146,15 @@ export function fetch(
         (r) => {
           const destStream =
             typeof _dest?.run === 'function' ? _dest.run() : _dest
-          return responseToReadable(r, rs).pipe(destStream)
+          const stream = responseToReadable(r, rs)
+          stream.on('error', (err) => {
+            if (typeof _dest?.abort === 'function') {
+              _dest.abort(err)
+            } else if (typeof destStream?.destroy === 'function') {
+              destStream.destroy(err)
+            }
+          })
+          return stream.pipe(destStream)
         },
         (err) => {
           if (typeof _dest?.abort === 'function') {
@@ -155,7 +163,7 @@ export function fetch(
             _dest.destroy(err)
           }
         }
-      )
+      ).catch(() => {})
       return _dest
     },
   })
