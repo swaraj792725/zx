@@ -1420,6 +1420,15 @@ describe('core', () => {
       )
     })
 
+    test('json() parses stdout even when stderr contains logs (#1505)', async () => {
+      const p = $({
+        quiet: true,
+      })`node -e "console.error('progress...'); console.log('{\\"ok\\":true}')"`
+      assert.deepEqual(await p.json(), { ok: true })
+      assert.deepEqual(await p.json('stdout'), { ok: true })
+      assert.deepEqual(await p.json({ source: 'stdout' }), { ok: true })
+    })
+
     test('tryJson()', async () => {
       assert.deepEqual(await $`echo '{"key":"value"}'`.tryJson(), {
         key: 'value',
@@ -1529,6 +1538,19 @@ describe('core', () => {
     test('json()', async () => {
       const o = new ProcessOutput(null, null, '', '', '{"key":"value"}')
       assert.deepEqual(o.json(), { key: 'value' })
+
+      const withLogs = new ProcessOutput(
+        0,
+        null,
+        '{"ok":true}',
+        'progress...',
+        '{"ok":true}progress...'
+      )
+      assert.deepEqual(withLogs.json(), { ok: true })
+      assert.deepEqual(withLogs.json('stdout'), { ok: true })
+      assert.deepEqual(withLogs.json({ source: 'stdout' }), { ok: true })
+      assert.equal(withLogs.tryJson('stderr'), undefined)
+      assert.throws(() => withLogs.json('stdall'))
     })
 
     test('text()', async () => {

@@ -65,6 +65,8 @@ export { Fail } from './error.ts'
 export { log, type LogEntry } from './log.ts'
 export { chalk, which, ps } from './vendor-core.ts'
 export { type Duration, quote, quotePowerShell } from './util.ts'
+export type JsonSource =
+  'stdout' | 'stderr' | 'stdall' | { source?: 'stdout' | 'stderr' | 'stdall' }
 
 const CWD = Symbol('processCwd')
 const SYNC = Symbol('syncExec')
@@ -574,20 +576,20 @@ export class ProcessPromise extends Promise<ProcessOutput> {
   }
 
   // Output formatters
-  json<T = any>(): Promise<T> {
-    return this.then((o) => o.json<T>())
+  json<T = any>(source?: JsonSource): Promise<T> {
+    return this.then((o) => o.json<T>(source))
   }
 
-  tryJson<T = any>(): Promise<T | undefined> {
-    return this.then((o) => o.tryJson<T>())
+  tryJson<T = any>(source?: JsonSource): Promise<T | undefined> {
+    return this.then((o) => o.tryJson<T>(source))
   }
 
-  jsonl<T = any>(): Promise<T[]> {
-    return this.then((o) => o.jsonl<T>())
+  jsonl<T = any>(source?: JsonSource): Promise<T[]> {
+    return this.then((o) => o.jsonl<T>(source))
   }
 
-  tryJsonl<T = any>(): Promise<(T | undefined)[]> {
-    return this.then((o) => o.tryJsonl<T>())
+  tryJsonl<T = any>(source?: JsonSource): Promise<(T | undefined)[]> {
+    return this.then((o) => o.tryJsonl<T>(source))
   }
 
   text(encoding?: Encoding): Promise<string> {
@@ -945,14 +947,31 @@ export class ProcessOutput extends Error {
     return !this._dto.error && this.exitCode === 0
   }
 
-  json<T = any>(): T {
+  private _getContent(source?: JsonSource, isJsonl = false): string {
+    const s =
+      typeof source === 'object' && source !== null ? source.source : source
+    if (s === 'stdout') return this.stdout
+    if (s === 'stderr') return this.stderr
+    if (s === 'stdall') return this.stdall
+
+    const out = this.stdout.trim()
+    if (out.length > 0) {
+      if (isJsonl) return out
+      try {
+        JSON.parse(out)
+        return out
+      } catch {}
+    }
+    return this.stdall
+  }
+
+  json<T = any>(source?: JsonSource): T {
+    const content = this._getContent(source)
     try {
-      return JSON.parse(this.stdall)
+      return JSON.parse(content)
     } catch {
       const preview =
-        this.stdall.length > 200
-          ? this.stdall.slice(0, 200) + '...'
-          : this.stdall
+        content.length > 200 ? content.slice(0, 200) + '...' : content
       const formatted = preview.replace(/\n/g, '↵')
       throw new SyntaxError(
         `Failed to parse command output as JSON: ${formatted}`
@@ -960,16 +979,18 @@ export class ProcessOutput extends Error {
     }
   }
 
-  tryJson<T = any>(): T | undefined {
+  tryJson<T = any>(source?: JsonSource): T | undefined {
     try {
-      return JSON.parse(this.stdall)
+      return JSON.parse(this._getContent(source))
     } catch {
       return undefined
     }
   }
 
-  jsonl<T = any>(): T[] {
-    return this.lines()
+  jsonl<T = any>(source?: JsonSource): T[] {
+    const content = this._getContent(source, true)
+    return content
+      .split(this._dto.delimiter || $.delimiter || DLMTR)
       .filter((line) => line.trim().length > 0)
       .map((line, idx) => {
         try {
@@ -983,8 +1004,10 @@ export class ProcessOutput extends Error {
       })
   }
 
-  tryJsonl<T = any>(): (T | undefined)[] {
-    return this.lines()
+  tryJsonl<T = any>(source?: JsonSource): (T | undefined)[] {
+    const content = this._getContent(source, true)
+    return content
+      .split(this._dto.delimiter || $.delimiter || DLMTR)
       .filter((line) => line.trim().length > 0)
       .map((line) => {
         try {
