@@ -147,6 +147,7 @@ describe('cli', () => {
     assert.equal(typeof cli.main, 'function', 'cli.main')
     assert.equal(typeof cli.normalizeExt, 'function', 'cli.normalizeExt')
     assert.equal(typeof cli.printUsage, 'function', 'cli.printUsage')
+    assert.equal(typeof cli.stripSecondaryShebangs, 'function', 'cli.stripSecondaryShebangs')
     assert.equal(typeof cli.transformMarkdown, 'function', 'cli.transformMarkdown')
   })
 })

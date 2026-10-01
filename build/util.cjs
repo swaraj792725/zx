@@ -77,10 +77,10 @@ function parseDuration(d) {
     if (isNaN(d) || d < 0) throw new Error(`Invalid duration: "${d}".`);
     return d;
   }
-  const match = String(d).match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)?$/);
+  const match = String(d).trim().match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)?$/i);
   if (!match) throw new Error(`Unknown duration: "${d}".`);
   const val = parseFloat(match[1]);
-  const unit = match[2] || "ms";
+  const unit = (match[2] || "ms").toLowerCase();
   const multipliers = {
     ms: 1,
     s: 1e3,

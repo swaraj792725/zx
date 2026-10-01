@@ -10,6 +10,7 @@ const {
   main,
   normalizeExt,
   printUsage,
+  stripSecondaryShebangs,
   transformMarkdown
 } = globalThis.Deno ? globalThis.require("./cli.cjs") : __module__
 export {
@@ -20,6 +21,7 @@ export {
   main,
   normalizeExt,
   printUsage,
+  stripSecondaryShebangs,
   transformMarkdown
 }
 

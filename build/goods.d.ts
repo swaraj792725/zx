@@ -34,8 +34,8 @@ export interface RetryOptions {
     delay?: Duration | Generator<number>;
     shouldRetry?: (err: unknown, attempt: number) => boolean;
 }
-export declare function retry<T>(count: number, callback: () => T): Promise<T>;
-export declare function retry<T>(count: number, durationOrOptions: Duration | Generator<number> | RetryOptions, callback: () => T): Promise<T>;
+export declare function retry<T>(count: number, callback: (attempt: number, lastErr?: unknown) => T): Promise<T>;
+export declare function retry<T>(count: number, durationOrOptions: Duration | Generator<number> | RetryOptions, callback: (attempt: number, lastErr?: unknown) => T): Promise<T>;
 export declare function expBackoff(max?: Duration, delay?: Duration, jitter?: boolean | number): Generator<number, void, unknown>;
 export declare function spinner<T>(callback: () => T): Promise<T>;
 export declare function spinner<T>(title: string, callback: () => T): Promise<T>;

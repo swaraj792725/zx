@@ -39,6 +39,13 @@ import { createRequire, type minimist } from './vendor.ts'
 
 export { transformMarkdown } from './md.ts'
 
+export function stripSecondaryShebangs(script: string): string {
+  return script.replace(
+    /^(#!.*\r?\n)((?:[ \t]*#!.*\r?\n?)+)/,
+    (_, first, rest) => first + rest.replace(/^[ \t]*#!/gm, '// #!')
+  )
+}
+
 const EXT = '.mjs'
 const EXT_RE = /^\.[mc]?[jt]sx?$/
 
@@ -240,6 +247,11 @@ async function readScript() {
     script = transformMarkdown(script)
     tempPath = getFilepath(dir, base, EXT)
   }
+  const cleanedScript = stripSecondaryShebangs(script)
+  if (cleanedScript !== script) {
+    script = cleanedScript
+    tempPath = tempPath || getFilepath(dir, base, ext || EXT)
+  }
   if (argSlice) updateArgv(argv._.slice(argSlice))
 
   return { script, scriptPath, tempPath }
@@ -306,10 +318,10 @@ export function normalizeExt(ext?: string): string | undefined {
 // prettier-ignore
 function getFilepath(cwd = '.', name = 'zx', _ext?: string): string {
   const ext = _ext || argv.ext || EXT
-  return [
-    name + ext,
-    name + '-' + randomId() + ext,
-  ]
-    .map(f => path.resolve(process.cwd(), cwd, f))
-    .find(f => !fs.existsSync(f))!
+  let file = path.resolve(process.cwd(), cwd, name + ext)
+  if (!fs.existsSync(file)) return file
+  do {
+    file = path.resolve(process.cwd(), cwd, `${name}-${randomId()}${ext}`)
+  } while (fs.existsSync(file))
+  return file
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { type minimist } from './vendor.js';
 export { transformMarkdown } from './md.js';
+export declare function stripSecondaryShebangs(script: string): string;
 export declare const argv: minimist.ParsedArgs;
 export declare function autorun(meta: ImportMeta): void;
 export declare function printUsage(): void;

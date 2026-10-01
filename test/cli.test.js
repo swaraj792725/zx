@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 import net from 'node:net'
 import getPort from 'get-port'
 import { $, path, tmpfile, tmpdir, fs } from '../build/index.js'
-import { isMain, normalizeExt } from '../build/cli.js'
+import { isMain, normalizeExt, stripSecondaryShebangs } from '../build/cli.js'
 import { fakeServer } from './fixtures/server.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -425,6 +425,34 @@ console.log(a);
     assert.equal(p.exitCode, 42)
   })
 
+  test('executes script with multiple hashbang lines', async () => {
+    const tempScript = path.resolve('test/fixtures/multi-shebang.mjs')
+    await fs.writeFile(
+      tempScript,
+      `#!/usr/bin/env nix-shell\n#!nix-shell -i zx -p zx\nconsole.log('multi-shebang-ok')\n`
+    )
+    try {
+      const p = await $`node build/cli.js ${tempScript}`
+      assert.match(p.stdout, /multi-shebang-ok/)
+    } finally {
+      await fs.rm(tempScript, { force: true })
+    }
+  })
+
+  test('executes extensionless script with multiple hashbang lines', async () => {
+    const tempScript = path.resolve('test/fixtures/multi-shebang-bin')
+    await fs.writeFile(
+      tempScript,
+      `#!/usr/bin/env nix-shell\n#!nix-shell -i zx -p zx\nconsole.log('multi-shebang-bin-ok')\n`
+    )
+    try {
+      const p = await $`node build/cli.js ${tempScript}`
+      assert.match(p.stdout, /multi-shebang-bin-ok/)
+    } finally {
+      await fs.rm(tempScript, { force: true })
+    }
+  })
+
   describe('internals', () => {
     test('isMain() checks process entry point', () => {
       assert.equal(isMain(import.meta.url, __filename), true)
@@ -454,6 +482,23 @@ console.log(a);
       assert.equal(normalizeExt('ts'), '.ts')
       assert.equal(normalizeExt('.'), '.')
       assert.equal(normalizeExt(), undefined)
+    })
+
+    test('stripSecondaryShebangs() comments out multiple lines of hashbangs', () => {
+      const input = `#!/usr/bin/env nix-shell
+#!nix-shell -i zx
+#! nix-shell -p zx
+console.log('hello')`
+      const expected = `#!/usr/bin/env nix-shell
+// #!nix-shell -i zx
+// #! nix-shell -p zx
+console.log('hello')`
+      assert.equal(stripSecondaryShebangs(input), expected)
+      assert.equal(
+        stripSecondaryShebangs('#!/usr/bin/env zx\nconsole.log(1)'),
+        '#!/usr/bin/env zx\nconsole.log(1)'
+      )
+      assert.equal(stripSecondaryShebangs('console.log(1)'), 'console.log(1)')
     })
   })
 })

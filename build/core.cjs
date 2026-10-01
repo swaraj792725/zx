@@ -238,7 +238,7 @@ ${details}`;
   static getCallerLocationFromString(stackString = "unknown") {
     const lines = stackString.split(/^\s*(at\s)?/m).filter((s) => s == null ? void 0 : s.includes(":"));
     const i = lines.findIndex((l) => l.includes("Proxy.set"));
-    const offset = i < 0 ? i : i + 2;
+    const offset = i < 0 ? lines.findIndex((l) => /:\d+/.test(l)) : i + 2;
     return (lines.find((l) => l.includes("file://")) || lines[offset] || stackString).trim();
   }
   static getCallerLocation(err = new Error("zx error")) {
@@ -282,7 +282,8 @@ var formatters = {
   retry(entry) {
     const attempt = `Attempt: ${entry.attempt}${entry.total == Infinity ? "" : `/${entry.total}`}`;
     const delay = entry.delay > 0 ? `; next in ${entry.delay}ms` : "";
-    return `${import_vendor_core.chalk.bgRed.white(" FAIL ")} ${attempt}${delay}
+    const reason = entry.exception instanceof Error ? ` \u2014 ${entry.exception.message.split("\n")[0]}` : "";
+    return `${import_vendor_core.chalk.bgRed.white(" FAIL ")} ${attempt}${delay}${reason}
 `;
   },
   end() {
@@ -753,17 +754,17 @@ var _ProcessPromise = class _ProcessPromise extends Promise {
     return this.toString();
   }
   // Output formatters
-  json() {
-    return this.then((o) => o.json());
+  json(source) {
+    return this.then((o) => o.json(source));
   }
-  tryJson() {
-    return this.then((o) => o.tryJson());
+  tryJson(source) {
+    return this.then((o) => o.tryJson(source));
   }
-  jsonl() {
-    return this.then((o) => o.jsonl());
+  jsonl(source) {
+    return this.then((o) => o.jsonl(source));
   }
-  tryJsonl() {
-    return this.then((o) => o.tryJsonl());
+  tryJsonl(source) {
+    return this.then((o) => o.tryJsonl(source));
   }
   text(encoding) {
     return this.then((o) => o.text(encoding));
@@ -1040,26 +1041,44 @@ var _ProcessOutput = class _ProcessOutput extends Error {
   get ok() {
     return !this._dto.error && this.exitCode === 0;
   }
-  json() {
+  _getContent(source, isJsonl = false) {
+    const s = typeof source === "object" && source !== null ? source.source : source;
+    if (s === "stdout") return this.stdout;
+    if (s === "stderr") return this.stderr;
+    if (s === "stdall") return this.stdall;
+    const out = this.stdout.trim();
+    if (out.length > 0) {
+      if (isJsonl) return out;
+      try {
+        JSON.parse(out);
+        return out;
+      } catch (e) {
+      }
+    }
+    return this.stdall;
+  }
+  json(source) {
+    const content = this._getContent(source);
     try {
-      return JSON.parse(this.stdall);
+      return JSON.parse(content);
     } catch (e) {
-      const preview = this.stdall.length > 200 ? this.stdall.slice(0, 200) + "..." : this.stdall;
+      const preview = content.length > 200 ? content.slice(0, 200) + "..." : content;
       const formatted = preview.replace(/\n/g, "\u21B5");
       throw new SyntaxError(
         `Failed to parse command output as JSON: ${formatted}`
       );
     }
   }
-  tryJson() {
+  tryJson(source) {
     try {
-      return JSON.parse(this.stdall);
+      return JSON.parse(this._getContent(source));
     } catch (e) {
       return void 0;
     }
   }
-  jsonl() {
-    return this.lines().filter((line) => line.trim().length > 0).map((line, idx) => {
+  jsonl(source) {
+    const content = this._getContent(source, true);
+    return content.split(this._dto.delimiter || $.delimiter || DLMTR).filter((line) => line.trim().length > 0).map((line, idx) => {
       try {
         return JSON.parse(line);
       } catch (e) {
@@ -1070,8 +1089,9 @@ var _ProcessOutput = class _ProcessOutput extends Error {
       }
     });
   }
-  tryJsonl() {
-    return this.lines().filter((line) => line.trim().length > 0).map((line) => {
+  tryJsonl(source) {
+    const content = this._getContent(source, true);
+    return content.split(this._dto.delimiter || $.delimiter || DLMTR).filter((line) => line.trim().length > 0).map((line) => {
       try {
         return JSON.parse(line);
       } catch (e) {

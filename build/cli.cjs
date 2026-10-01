@@ -24,6 +24,7 @@ __export(cli_exports, {
   main: () => main,
   normalizeExt: () => normalizeExt,
   printUsage: () => printUsage,
+  stripSecondaryShebangs: () => stripSecondaryShebangs,
   transformMarkdown: () => transformMarkdown
 });
 module.exports = __toCommonJS(cli_exports);
@@ -63,7 +64,7 @@ var import_util = require("./util.cjs");
 function transformMarkdown(buf) {
   var _a2;
   const out = [];
-  const tabRe = /^(  +|\t)/;
+  const tabRe = /^( {4,}|\t)/;
   const fenceRe = new RegExp("^(?<indent> {0,3})(?<fence>(`{3,20}|~{3,20}))(?:(?<js>js|javascript|ts|typescript)|(?<bash>sh|shell|bash)|.*)$");
   let state = "root";
   let prevEmpty = true;
@@ -103,18 +104,18 @@ function transformMarkdown(buf) {
           state = "tab";
           continue;
         }
-        prevEmpty = line === "";
+        prevEmpty = line.trim() === "";
         out.push("// " + line);
         continue;
       }
       case "tab":
-        if (line === "") out.push("");
+        if (line.trim() === "") out.push("");
         else if (tabRe.test(line)) out.push(line);
         else {
           out.push("// " + line);
           state = "root";
         }
-        prevEmpty = line === "";
+        prevEmpty = line.trim() === "";
         break;
       case "fence":
         if (isEnd(line)) {
@@ -136,6 +137,12 @@ function transformMarkdown(buf) {
 // src/cli.ts
 var import_vendor = require("./vendor.cjs");
 var import_meta = {};
+function stripSecondaryShebangs(script) {
+  return script.replace(
+    /^(#!.*\r?\n)((?:[ \t]*#!.*\r?\n?)+)/,
+    (_, first, rest) => first + rest.replace(/^[ \t]*#!/gm, "// #!")
+  );
+}
 var EXT = ".mjs";
 var EXT_RE = /^\.[mc]?[jt]sx?$/;
 var argv = (0, import_index.parseArgv)(import_node_process2.default.argv.slice(2), {
@@ -312,6 +319,11 @@ function readScript() {
       script = transformMarkdown(script);
       tempPath = getFilepath(dir, base, EXT);
     }
+    const cleanedScript = stripSecondaryShebangs(script);
+    if (cleanedScript !== script) {
+      script = cleanedScript;
+      tempPath = tempPath || getFilepath(dir, base, ext || EXT);
+    }
     if (argSlice) (0, import_index.updateArgv)(argv._.slice(argSlice));
     return { script, scriptPath, tempPath };
   });
@@ -339,25 +351,39 @@ function injectGlobalRequire(origin) {
   Object.assign(globalThis, { __filename, __dirname, require: require2 });
 }
 function isMain(meta = import_meta_url, scriptpath = import_node_process2.default.argv[1]) {
+  if (typeof meta === "object" && meta !== null) {
+    if ("main" in meta) return !!meta.main;
+    meta = meta.url;
+  }
   if (typeof meta === "string") {
+    if (meta.startsWith("jsr:") || meta.startsWith("npm:") || /^https?:/.test(meta)) {
+      return true;
+    }
     if (meta.startsWith("file:")) {
       const modulePath = import_node_url.default.fileURLToPath(meta).replace(/\.\w+$/, "");
-      const mainPath = import_index.fs.realpathSync(scriptpath).replace(/\.\w+$/, "");
+      let mainPath = scriptpath;
+      try {
+        mainPath = import_index.fs.realpathSync(scriptpath);
+      } catch (e) {
+      }
+      mainPath = mainPath.replace(/\.\w+$/, "");
       return mainPath === modulePath;
     }
     return false;
   }
-  return !!meta.main;
+  return false;
 }
 function normalizeExt(ext) {
   return ext ? import_index.path.parse(`foo.${ext}`).ext : ext;
 }
 function getFilepath(cwd = ".", name = "zx", _ext) {
   const ext = _ext || argv.ext || EXT;
-  return [
-    name + ext,
-    name + "-" + (0, import_util2.randomId)() + ext
-  ].map((f) => import_index.path.resolve(import_node_process2.default.cwd(), cwd, f)).find((f) => !import_index.fs.existsSync(f));
+  let file = import_index.path.resolve(import_node_process2.default.cwd(), cwd, name + ext);
+  if (!import_index.fs.existsSync(file)) return file;
+  do {
+    file = import_index.path.resolve(import_node_process2.default.cwd(), cwd, `${name}-${(0, import_util2.randomId)()}${ext}`);
+  } while (import_index.fs.existsSync(file));
+  return file;
 }
 /* c8 ignore next 100 */
 // Annotate the CommonJS export names for ESM import in node:
@@ -369,5 +395,6 @@ function getFilepath(cwd = ".", name = "zx", _ext) {
   main,
   normalizeExt,
   printUsage,
+  stripSecondaryShebangs,
   transformMarkdown
 });

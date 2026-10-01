@@ -131,7 +131,15 @@ function fetch(url, init) {
       p.then(
         (r) => {
           const destStream = typeof (_dest == null ? void 0 : _dest.run) === "function" ? _dest.run() : _dest;
-          return responseToReadable(r, rs).pipe(destStream);
+          const stream = responseToReadable(r, rs);
+          stream.on("error", (err) => {
+            if (typeof (_dest == null ? void 0 : _dest.abort) === "function") {
+              _dest.abort(err);
+            } else if (typeof (destStream == null ? void 0 : destStream.destroy) === "function") {
+              destStream.destroy(err);
+            }
+          });
+          return stream.pipe(destStream);
         },
         (err) => {
           if (typeof (_dest == null ? void 0 : _dest.abort) === "function") {
@@ -140,7 +148,8 @@ function fetch(url, init) {
             _dest.destroy(err);
           }
         }
-      );
+      ).catch(() => {
+      });
       return _dest;
     }
   });
@@ -220,7 +229,7 @@ function retry(count, d, cb) {
     while (count-- > 0) {
       attempt++;
       try {
-        return yield cb();
+        return yield cb(attempt, lastErr);
       } catch (err) {
         lastErr = err;
         if (shouldRetry && !shouldRetry(err, attempt)) {
@@ -272,7 +281,11 @@ function spinner(title, callback) {
         return yield callback();
       } finally {
         clearInterval(id);
-        stream.write(" ".repeat((import_node_process.default.stdout.columns || 1) - 1) + "\r");
+        const cleanLen = Math.max(
+          import_node_process.default.stdout.columns || 80,
+          (title ? String(title).length : 0) + 10
+        );
+        stream.write(" ".repeat(cleanLen) + "\r");
       }
     }));
   });
