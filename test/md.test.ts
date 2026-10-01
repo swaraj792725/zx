@@ -115,6 +115,43 @@ echo "4"
       assert.equal((result.match(/await \$`/g) ?? []).length, 3)
       assert.equal((result.match(/^`$/gm) ?? []).length, 3)
     })
+
+    test('accepts code fences indented 4+ spaces inside lists (#1389)', () => {
+      const input = `# h1
+
+paragraph
+
+## h2
+
+### h3
+
+\`\`\`bash
+echo "1"
+\`\`\`
+
+### h3
+
+- item 1
+
+
+      \`\`\`bash
+      echo "2"
+      \`\`\`
+
+
+### h3
+
+\`\`\`bash
+echo "4"
+\`\`\`
+`
+      const result = transformMarkdown(input)
+
+      assert.ok(!/```|~~~/.test(result), 'no raw markdown fences should remain')
+      assert.equal((result.match(/await \$`/g) ?? []).length, 3)
+      assert.equal((result.match(/^`$/gm) ?? []).length, 3)
+      assert.ok(result.includes('await $`\necho "2"\n`'))
+    })
   })
 
   test('handles all ECMAScript line terminators', () => {

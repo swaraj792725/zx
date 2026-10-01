@@ -19,7 +19,7 @@ export function transformMarkdown(buf: Buffer | string): string {
   const out: string[] = []
   const tabRe = /^(  +|\t)/
   const fenceRe =
-    /^(?<indent> {0,3})(?<fence>(`{3,20}|~{3,20}))(?:(?<js>js|javascript|ts|typescript)|(?<bash>sh|shell|bash)|.*)$/
+    /^(?<indent> *)(?<fence>(`{3,20}|~{3,20}))(?:(?<js>js|javascript|ts|typescript)|(?<bash>sh|shell|bash)|.*)$/
 
   let state = 'root'
   let prevEmpty = true
@@ -39,7 +39,7 @@ export function transformMarkdown(buf: Buffer | string): string {
         if (g?.fence) {
           fenceChar = g.fence[0]
           stripRe = g.indent ? new RegExp(`^ {0,${g.indent.length}}`) : null
-          endRe = new RegExp(`^ {0,3}${fenceChar}{${g.fence.length},}[ \\t]*$`)
+          endRe = new RegExp(`^ *${fenceChar}{${g.fence.length},}[ \\t]*$`)
 
           if (g.js) {
             out.push('')
